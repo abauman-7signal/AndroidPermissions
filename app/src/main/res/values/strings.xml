@@ -1,3 +1,11 @@
 <resources>
 	<string name="app_name">Permissions</string>
+	<string name="all_necessary_permission_granted">All necessary permissions granted.</string>
+	<string name="permission_granted_for">Permission granted for </string>
+	<string name="account_permission_reason">Needs permission to access contact information</string>
+	<string name="location_permission_reason">Needs permission to access location information</string>
+	<string name="phone_permission_reason">Needs permission to access phone information</string>
+	<string name="all_permission_reason">Needs permission to access user name, Wi-Fi access points, and device ID.</string>
+	<string name="ok_button_label">OK</string>
+	<string name="not_available">N/A</string>
 </resources>
