@@ -31,6 +31,8 @@ import static org.mockito.Mockito.when;
 @PrepareForTest({ContextCompat.class, ActivityCompat.class, PermissionClarificationDialog.class})
 public class PermissionRequesterTest {
 
+	private PermissionRequester subject;
+
 	@Mock private Activity activityMocked;
 	@Mock private Resources resourcesMocked;
 	@Mock private FragmentManager fragmentManagerMocked;
@@ -68,7 +70,7 @@ public class PermissionRequesterTest {
 
 		mockWhenRequestingPermissions(permissionClarificationDialogTester);
 
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		subject.requestPermissions(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO);
 		assertEquals(1, permissionClarificationDialogTester.numberOfTimesCalled_Show);
 	}
@@ -78,7 +80,7 @@ public class PermissionRequesterTest {
 		final String[] permissionsToRequest = {Manifest.permission.GET_ACCOUNTS};
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		subject.finishRequestPermissions(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO);
 
 		PowerMockito.verifyStatic(ActivityCompat.class, Mockito.times(1));
@@ -93,7 +95,7 @@ public class PermissionRequesterTest {
 		final String[] permissionsToRequest = {Manifest.permission.GET_ACCOUNTS};
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		subject.requestPermissions(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO);
 
 		PowerMockito.verifyStatic(ActivityCompat.class, Mockito.times(0));
@@ -112,7 +114,7 @@ public class PermissionRequesterTest {
 
 	@Test
 	public void shouldKnowWhenAllRequiredPermissionsGranted() {
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		PowerMockito.mockStatic(ContextCompat.class);
 		PowerMockito.when(ContextCompat.checkSelfPermission(any(Activity.class), anyString()))
 				.thenReturn(PackageManager.PERMISSION_GRANTED);
@@ -122,7 +124,7 @@ public class PermissionRequesterTest {
 
 	@Test
 	public void shouldKnowWhenOneRequiredPermissionNotGranted() {
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		PowerMockito.mockStatic(ContextCompat.class);
 		PowerMockito.when(ContextCompat.checkSelfPermission(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO.getDescription()))
 				.thenReturn(PackageManager.PERMISSION_GRANTED);
@@ -139,7 +141,7 @@ public class PermissionRequesterTest {
 		int requestCode = 103;
 		String[] permissions = {Manifest.permission.READ_PHONE_STATE};
 		int[] grantResults = {PackageManager.PERMISSION_GRANTED};
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		assertTrue("should indicate permission granted", subject.isPermissionGranted(requestCode, permissions, grantResults));
 	}
 
@@ -148,13 +150,13 @@ public class PermissionRequesterTest {
 		int requestCode = 103;
 		String[] permissions = {Manifest.permission.READ_PHONE_STATE};
 		int[] grantResults = {PackageManager.PERMISSION_DENIED};
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		assertFalse("should indicate permission not granted", subject.isPermissionGranted(requestCode, permissions, grantResults));
 	}
 
 	@Test
 	public void shouldIndicateNotGrantedWhenRequestCodeInvalid() {
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		assertFalse("should indicate permission not granted when request code invalid", subject.isPermissionGranted(-1, null, null));
 	}
 
@@ -163,13 +165,13 @@ public class PermissionRequesterTest {
 		int requestCode = 103;
 		String[] permissions = {};
 		int[] grantResults = {};
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		assertFalse("should indicate permission not granted when results empty", subject.isPermissionGranted(requestCode, permissions, grantResults));
 	}
 
 	@Test
 	public void shouldIndicatePermissionNotGrantedWhenRequestCodeDoesNotMatchPermissionsResults() {
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		final int[] grantResults = {PackageManager.PERMISSION_GRANTED};
 		final String[] permissionsResults = {Manifest.permission.ACCESS_COARSE_LOCATION};
 		assertFalse("should indicate permission not granted when request code does not match permission results", subject.isPermissionGranted(103, permissionsResults, grantResults));
@@ -177,21 +179,21 @@ public class PermissionRequesterTest {
 
 	@Test
 	public void shouldIndicatePermissionNotGrantedWhenPermissionResultsAreNull() {
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		final int[] grantResults = {PackageManager.PERMISSION_GRANTED};
 		assertFalse("should indicate permission not granted when permission results are null", subject.isPermissionGranted(103, null, grantResults));
 	}
 
 	@Test
 	public void shouldIndicatePermissionNotGrantedWhenGrantResultsAreNull() {
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		final String[] permissionsResults = {Manifest.permission.ACCESS_COARSE_LOCATION};
 		assertFalse("should indicate permission not granted when grant results are null", subject.isPermissionGranted(103, permissionsResults, null));
 	}
 
 	@Test
 	public void shouldIndicatePermissionNotGrantedWhenSizeOfPermissionResultsAndSizeOfGrantResultsDoNotMatch() {
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		final int[] grantResults = {PackageManager.PERMISSION_GRANTED};
 		final String[] permissionsResults = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.ACCESS_COARSE_LOCATION};
 		assertFalse("should indicate permission not granted when size of permission results does not match size of grant results", subject.isPermissionGranted(103, permissionsResults, grantResults));
@@ -203,7 +205,7 @@ public class PermissionRequesterTest {
 
 		mockWhenRequestingPermissions(permissionClarificationDialogTester);
 
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		subject.requestAllPermissions(activityMocked);
 
 		assertEquals(3, permissionClarificationDialogTester.numberOfTimesCalled_Show);
@@ -221,7 +223,7 @@ public class PermissionRequesterTest {
 		PowerMockito.when(ContextCompat.checkSelfPermission(any(Context.class), anyString()))
 				.thenReturn(PackageManager.PERMISSION_GRANTED);
 		PowerMockito.mockStatic(ActivityCompat.class);
-		PermissionRequester subject = PermissionRequester.getPermissionRequester();
+		subject = PermissionRequester.getPermissionRequester();
 		subject.requestAllPermissions(activityMocked);
 
 		PowerMockito.verifyStatic(ActivityCompat.class, Mockito.times(0));
