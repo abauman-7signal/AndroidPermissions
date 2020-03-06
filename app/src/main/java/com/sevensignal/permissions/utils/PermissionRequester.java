@@ -7,26 +7,40 @@ import android.content.pm.PackageManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.sevensignal.permissions.R;
+import com.sevensignal.permissions.view.PermissionClarificationDialog;
 
-@NoArgsConstructor
+import java.util.ArrayList;
+import java.util.List;
+
+import lombok.Getter;
+
 public class PermissionRequester {
 
-    public static final int REQUEST_CODE_FOR_ALL_PERMISSIONS = 999;
+	final static String PERMISSION_REQUESTER_DIALOG_TAG = "permissionRequesterDialogTag";
+
+	private PermissionRequester() {}
+
+	public static PermissionRequester getPermissionRequester() {
+		return new PermissionRequester();
+	}
+
+	public static final int REQUEST_CODE_FOR_ALL_PERMISSIONS = 999;
 
 	public enum Permissions {
-		PERMISSION_TO_READ_ACCOUNT_INFO(101, Manifest.permission.GET_ACCOUNTS),
-		PERMISSION_TO_READ_LOCATION_INFO(102, Manifest.permission.ACCESS_COARSE_LOCATION),
-		PERMISSION_TO_READ_PHONE_INFO(103, Manifest.permission.READ_PHONE_STATE),
-		PERMISSION_INVALID(999, "android.permission.invalid");
+		PERMISSION_TO_READ_ACCOUNT_INFO(101, Manifest.permission.GET_ACCOUNTS, R.string.account_permission_reason),
+		PERMISSION_TO_READ_LOCATION_INFO(102, Manifest.permission.ACCESS_COARSE_LOCATION, R.string.location_permission_reason),
+		PERMISSION_TO_READ_PHONE_INFO(103, Manifest.permission.READ_PHONE_STATE, R.string.phone_permission_reason),
+		PERMISSION_INVALID(999, "android.permission.invalid", R.string.all_permission_reason);
 
 		@Getter private final int requestCode;
 		@Getter private final String description;
+		@Getter private final int reasonId;
 
-		Permissions(int requestCode, String description) {
+		Permissions(int requestCode, String description, int reasonId) {
 			this.requestCode = requestCode;
 			this.description = description;
+			this.reasonId = reasonId;
 		}
 
 		public static Permissions getById(final int id) {
@@ -43,53 +57,74 @@ public class PermissionRequester {
 		return (ContextCompat.checkSelfPermission(context, permission.getDescription()) == PackageManager.PERMISSION_GRANTED);
 	}
 
-	public boolean areAllRequiredPermissionsGranted(final Context context) {
-		boolean permissionsGranted = true;
+	private List<Permissions> getAllValidPermissions() {
+		List<Permissions> permissions = new ArrayList<>();
 		for (Permissions permission : Permissions.values()) {
 			if (permission != Permissions.PERMISSION_INVALID) {
-				permissionsGranted = permissionsGranted && checkPermission(context, permission);
+				permissions.add(permission);
 			}
+		}
+		return permissions;
+	}
+
+	public boolean areAllRequiredPermissionsGranted(final Context context) {
+		boolean permissionsGranted = true;
+		for (Permissions permission : getAllValidPermissions()) {
+			permissionsGranted = permissionsGranted && checkPermission(context, permission);
 		}
 		return permissionsGranted;
 	}
 
-	public void requestPermissions(Activity activity, Permissions permission) {
+	public void requestPermissions(Activity activity, final Permissions permission) {
 		if (!checkPermission(activity, permission)) {
-			String[] permissions = {permission.getDescription()};
-			ActivityCompat.requestPermissions(activity, permissions, permission.getRequestCode());
+			showRequestPermissionRationale(activity, permission);
 		}
 	}
 
-	public void requestAllPermissions(Activity activity) {
-	    if (!areAllRequiredPermissionsGranted(activity)) {
-            String[] permissions = {
-                    Permissions.PERMISSION_TO_READ_ACCOUNT_INFO.getDescription(),
-                    Permissions.PERMISSION_TO_READ_LOCATION_INFO.getDescription(),
-                    Permissions.PERMISSION_TO_READ_PHONE_INFO.getDescription()
-            };
-            ActivityCompat.requestPermissions(activity, permissions, REQUEST_CODE_FOR_ALL_PERMISSIONS);
-        }
+	public void finishRequestPermissions(final Activity activity, final Permissions permission) {
+			String[] permissions = {permission.getDescription()};
+			ActivityCompat.requestPermissions(activity, permissions, permission.getRequestCode());
+	}
+
+	private void showRequestPermissionRationale(final Activity activity, final Permissions permission) {
+		if (!checkPermission(activity, permission) &&
+			shouldShowRequestPermissionRationale(activity, permission)) {
+
+			PermissionClarificationDialog.build(
+					"",
+					activity.getResources().getString(permission.getReasonId()),
+					permission)
+					.show(activity.getFragmentManager(), PERMISSION_REQUESTER_DIALOG_TAG);
+		}
+	}
+
+	private boolean shouldShowRequestPermissionRationale(Activity activity, Permissions permission) {
+		return ActivityCompat.shouldShowRequestPermissionRationale(activity, permission.getDescription());
+	}
+
+	public void requestAllPermissions(final Activity activity) {
+		if (!areAllRequiredPermissionsGranted(activity)) {
+			for (Permissions permission : getAllValidPermissions()) {
+				requestPermissions(activity, permission);
+			}
+		}
 	}
 
 	public boolean isPermissionGranted(final int requestCode, final String[] permissions, final int[] grantResults) {
 		final Permissions requestedPermission = Permissions.getById(requestCode);
-		if (requestedPermission == Permissions.PERMISSION_INVALID) {
+		if (requestedPermission == Permissions.PERMISSION_INVALID ||
+			permissions == null ||
+			grantResults == null ||
+			permissions.length != grantResults.length) {
+
 			return false;
 		} else {
-			if (grantResults.length > 0) {
-				for (int i = 0 ; i < grantResults.length ; i++) {
-					if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-						if (permissions[i].equals(requestedPermission.getDescription())) {
-							return true;
-						} else {
-							return false;
-						}
-					}
+			for (int i = 0 ; i < grantResults.length ; i++) {
+				if (permissions[i].equals(requestedPermission.getDescription())) {
+					return grantResults[i] == PackageManager.PERMISSION_GRANTED;
 				}
-				return false;
-			} else {
-				return false;
 			}
 		}
+		return false;
 	}
 }
