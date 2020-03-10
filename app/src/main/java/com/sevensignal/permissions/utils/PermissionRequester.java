@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 
 import com.sevensignal.permissions.R;
 import com.sevensignal.permissions.view.PermissionClarificationDialog;
@@ -15,9 +16,11 @@ import java.util.List;
 
 import lombok.Getter;
 
+import static com.sevensignal.permissions.logging.LoggingConstants.PERM_REQUEST_PERM;
+
 public class PermissionRequester {
 
-	final static String PERMISSION_REQUESTER_DIALOG_TAG = "permissionRequesterDialogTag";
+	private final static String PERMISSION_REQUESTER_DIALOG_TAG = "permissionRequesterDialogTag";
 
 	private PermissionRequester() {}
 
@@ -51,6 +54,46 @@ public class PermissionRequester {
 			}
 			return Permissions.PERMISSION_INVALID;
 		}
+	}
+
+	public PermissionRequestJob beginRequestingAllPermissions() {
+		return new PermissionRequestJob(getAllValidPermissions());
+	}
+
+	public boolean requestNextPermission(final Activity activity, final PermissionRequestJob permissionRequestJob) {
+		if (permissionRequestJob == null) {
+			throw new IllegalArgumentException();
+		}
+		List<PermissionRequest> permissionRequestList = permissionRequestJob.getPermissionsToRequest();
+		for (PermissionRequest permissionRequest : permissionRequestList) {
+			switch (permissionRequest.getRequestingState()) {
+				case WAITING:
+					if (shouldRequestPermission(activity, permissionRequest.getPermission())) {
+						permissionRequest.setRequestingState(PermissionRequestingStates.REQUESTING);
+						return true;
+					} else {
+						permissionRequest.setRequestingState(PermissionRequestingStates.REQUESTED);
+						return false;
+					}
+
+				case REQUESTED:
+					break;
+
+				case REQUESTING:
+					permissionRequest.setRequestingState(PermissionRequestingStates.REQUESTED);
+					break;
+
+				default:
+					Log.e(PERM_REQUEST_PERM, "Unexpected request permission state: " + permissionRequest.getRequestingState());
+					break;
+			}
+		}
+		return false;
+	}
+
+	private boolean shouldRequestPermission(Activity activity, Permissions permission) {
+		return (!checkPermission(activity, permission) &&
+				shouldShowRequestPermissionRationale(activity, permission));
 	}
 
 	boolean checkPermission(Context context, Permissions permission) {

@@ -220,4 +220,95 @@ public class PermissionRequesterTest {
 		PowerMockito.verifyStatic(ActivityCompat.class, Mockito.times(0));
 		ActivityCompat.requestPermissions(activityMocked, permissionsToRequest, PermissionRequester.REQUEST_CODE_FOR_ALL_PERMISSIONS);
 	}
+
+	@Test
+	public void whenRequestingAllPermissions_shouldNotBeDoneRequestingPermissions() {
+		PermissionRequestJob permissionRequestJob = subject.beginRequestingAllPermissions();
+		assertFalse(permissionRequestJob.hasAllPermissionsBeenRequested());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void whenRequestingNextPermission_shouldRequireValidArgument() {
+		subject.requestNextPermission(activityMocked, null);
+	}
+
+	@Test
+	public void shouldRequireCorrectAmountOfTimesToRequestNextPermission_TypicalUseCase() {
+		PowerMockito.mockStatic(ContextCompat.class);
+		PowerMockito.mockStatic(ActivityCompat.class);
+
+		mockCheckSelfPerm(PackageManager.PERMISSION_DENIED);
+		mockShouldShowRequestPermRationale(true);
+
+		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
+		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
+
+		assertRequestingNextPerm(permReqJob, true, false);
+		assertRequestingNextPerm(permReqJob, true, false);
+		assertRequestingNextPerm(permReqJob, true, false);
+		assertRequestingNextPerm(permReqJob, false, true);
+	}
+
+	@Test
+	public void shouldRequireCorrectAmountOfTimesToRequestNextPermission_AllAlreadyGranted() {
+		PowerMockito.mockStatic(ContextCompat.class);
+		PowerMockito.mockStatic(ActivityCompat.class);
+
+		mockCheckSelfPerm(PackageManager.PERMISSION_GRANTED);
+		mockShouldShowRequestPermRationale(true);
+
+		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
+		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
+
+		assertRequestingNextPerm(permReqJob, false, false);
+		assertRequestingNextPerm(permReqJob, false, false);
+		assertRequestingNextPerm(permReqJob, false, true);
+	}
+
+	@Test
+	public void shouldRequireCorrectAmountOfTimesToRequestNextPermission_AllAlreadyDeniedAndShouldNotRequest() {
+		PowerMockito.mockStatic(ContextCompat.class);
+		PowerMockito.mockStatic(ActivityCompat.class);
+
+		mockCheckSelfPerm(PackageManager.PERMISSION_DENIED);
+		mockShouldShowRequestPermRationale(false);
+
+		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
+		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
+
+		assertRequestingNextPerm(permReqJob, false, false);
+		assertRequestingNextPerm(permReqJob, false, false);
+		assertRequestingNextPerm(permReqJob, false, true);
+	}
+
+	@Test
+	public void shouldRequestNextPermission_whenInitialState() {
+		PowerMockito.mockStatic(ContextCompat.class);
+		PowerMockito.mockStatic(ActivityCompat.class);
+
+		mockCheckSelfPerm(PackageManager.PERMISSION_DENIED);
+		mockShouldShowRequestPermRationale(false);
+
+		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
+		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
+
+		assertRequestingNextPerm(permReqJob, false, false);
+		assertRequestingNextPerm(permReqJob, false, false);
+		assertRequestingNextPerm(permReqJob, false, true);
+	}
+
+	private void assertRequestingNextPerm(PermissionRequestJob permReqJob, boolean shouldPermBeenRequested, boolean hasAllPermsBeenRequested) {
+		assertEquals(shouldPermBeenRequested, subject.requestNextPermission(activityMocked, permReqJob));
+		assertEquals(hasAllPermsBeenRequested, permReqJob.hasAllPermissionsBeenRequested());
+	}
+
+	private void mockCheckSelfPerm(int permissionCode) {
+		PowerMockito.when(ContextCompat.checkSelfPermission(any(Context.class), anyString()))
+				.thenReturn(permissionCode);
+	}
+
+	private void mockShouldShowRequestPermRationale(boolean shouldShow) {
+		PowerMockito.when(ActivityCompat.shouldShowRequestPermissionRationale(any(Activity.class), anyString()))
+				.thenReturn(shouldShow);
+	}
 }
