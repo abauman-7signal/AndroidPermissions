@@ -93,7 +93,7 @@ public class PermissionRequesterTest {
 		final String[] permissionsToRequest = {Manifest.permission.GET_ACCOUNTS};
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		subject.finishRequestPermissions(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
+		subject.finishRequestingPermission(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
 
 		verify(permissionsAndroidMocked, Mockito.times(1));
 		permissionsAndroidMocked.requestPermissions(activityMocked, permissionsToRequest, PERMISSION_TO_READ_ACCOUNT_INFO.getRequestCode());

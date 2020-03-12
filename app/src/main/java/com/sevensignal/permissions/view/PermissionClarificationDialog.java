@@ -50,7 +50,7 @@ public class PermissionClarificationDialog extends DialogFragment {
 					public void onClick (DialogInterface dialog, int id) {
 						Log.d (LoggingConstants.PERM_APP, CLASS_NAME + " Clicked positive action button");
 						PermissionRequester permissionRequester = PermissionRequester.getPermissionRequester();
-						permissionRequester.finishRequestPermissions(getActivity(), getPermissionRequested());
+						permissionRequester.finishRequestingPermission(getActivity(), getPermissionRequested());
 					}
 				});
 		return builder.create();

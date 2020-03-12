@@ -115,6 +115,12 @@ public class PermissionRequester {
 		return permissionsGranted;
 	}
 
+	public void finishRequestingPermission(final Activity activity, final Permissions permission) {
+		PermissionsAndroid android = PermissionsAndroid.create();
+		String[] permissions = {permission.getDescription()};
+		android.requestPermissions(activity, permissions, permission.getRequestCode());
+	}
+
 	// ----------
 
 	public void requestPermissions(Activity activity, final Permissions permission) {
@@ -122,12 +128,6 @@ public class PermissionRequester {
 		if (!android.checkPermission(activity, permission)) {
 			showRequestPermissionRationale(activity, permission);
 		}
-	}
-
-	public void finishRequestPermissions(final Activity activity, final Permissions permission) {
-		PermissionsAndroid android = PermissionsAndroid.create();
-		String[] permissions = {permission.getDescription()};
-		android.requestPermissions(activity, permissions, permission.getRequestCode());
 	}
 
 	private void showRequestPermissionRationale(final Activity activity, final Permissions permission) {
