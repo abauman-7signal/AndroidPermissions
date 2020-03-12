@@ -1,12 +1,15 @@
 package com.sevensignal.permissions.utils;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import lombok.Getter;
+import lombok.ToString;
 
-public class PermissionRequestJob {
+@ToString
+public class PermissionRequestJob implements Serializable {
 
 	// TODO -- convert to set to disallow duplicates
 	@Getter

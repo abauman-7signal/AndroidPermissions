@@ -1,9 +1,13 @@
 package com.sevensignal.permissions.utils;
 
+import java.io.Serializable;
+
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
-public class PermissionRequest {
+@ToString
+public class PermissionRequest implements Serializable {
 	@Getter
 	private PermissionRequester.Permissions permission;
 	@Getter @Setter
