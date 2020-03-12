@@ -7,7 +7,6 @@ import android.util.Log;
 import android.widget.TextView;
 
 import com.sevensignal.permissions.logging.LoggingConstants;
-import com.sevensignal.permissions.shims.PermissionsAndroid;
 import com.sevensignal.permissions.utils.PermissionRequestJob;
 import com.sevensignal.permissions.utils.PermissionRequester;
 import com.sevensignal.permissions.view.PermissionClarificationDialog;
@@ -102,17 +101,6 @@ public class MainActivity extends AppCompatActivity {
 				permRequestJob = permissionRequester.beginRequestingAllPermissions();
 			}
 			return requestNextPermission(permRequestJob);
-//			PermissionRequester.Permissions permission;
-//			while((permission = permissionRequester.getNextPermissionToRequest(this, permRequestJob, currentPermBeingRequested)) != null) {
-//				if (permission != null) {
-//					PermissionsAndroid android = PermissionsAndroid.create();
-//					if (!android.checkPermission(this, permission)) {
-//						if (showRequestPermissionRationale(this, permission)) {
-//							return true;
-//						}
-//					}
-//				}
-//			}
 		}
 		return false;
 	}
@@ -127,22 +115,15 @@ public class MainActivity extends AppCompatActivity {
 		return false;
 	}
 
-	private boolean showRequestPermissionRationale(final Activity activity, final PermissionRequester.Permissions permission) {
-		PermissionsAndroid android = PermissionsAndroid.create();
-		if (!android.checkPermission(activity, permission) &&
-				android.shouldShowRequestPermissionRationale(activity, permission)) {
-
-			final String msg = "Requesting permission: " + permission.getDescription();
-			appendMessage(msg);
-			Log.d(LoggingConstants.PERM_UI, msg);
-			PermissionClarificationDialog.build(
-					"",
-					activity.getResources().getString(permission.getReasonId()),
-					permission)
-					.show(activity.getFragmentManager(), PERMISSION_REQUESTER_DIALOG_TAG);
-			return true;
-		}
-		return false;
+	private void showRequestPermissionRationale(final Activity activity, final PermissionRequester.Permissions permission) {
+		final String msg = "Requesting permission: " + permission.getDescription();
+		appendMessage(msg);
+		Log.d(LoggingConstants.PERM_UI, msg);
+		PermissionClarificationDialog.build(
+				"",
+				activity.getResources().getString(permission.getReasonId()),
+				permission)
+				.show(activity.getFragmentManager(), PERMISSION_REQUESTER_DIALOG_TAG);
 	}
 
 	private boolean requestNextPermission(PermissionRequestJob permissionRequestJob) {
@@ -150,11 +131,8 @@ public class MainActivity extends AppCompatActivity {
 		if (permissionRequestJob != null) {
 			final PermissionRequester.Permissions nextPermToRequest = permissionRequester.getNextPermissionToRequest(this, permissionRequestJob);
 			if (nextPermToRequest != null) {
-				PermissionsAndroid android = PermissionsAndroid.create();
-				if (!android.checkPermission(this, nextPermToRequest)) {
-					return showRequestPermissionRationale(this, nextPermToRequest);
-				}
-				return false;
+				showRequestPermissionRationale(this, nextPermToRequest);
+				return true;
 			}
 		}
 		return false;
