@@ -9,6 +9,7 @@ import android.content.res.Resources;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 
+import com.sevensignal.permissions.shims.PermissionsAndroid;
 import com.sevensignal.permissions.view.PermissionClarificationDialog;
 
 import org.junit.Before;
@@ -20,16 +21,20 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import static com.sevensignal.permissions.utils.PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO;
+import static com.sevensignal.permissions.utils.PermissionRequester.Permissions.PERMISSION_TO_READ_LOCATION_INFO;
+import static com.sevensignal.permissions.utils.PermissionRequester.Permissions.PERMISSION_TO_READ_PHONE_INFO;
 import static junit.framework.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ContextCompat.class, ActivityCompat.class, PermissionClarificationDialog.class})
+@PrepareForTest({ContextCompat.class, ActivityCompat.class, PermissionClarificationDialog.class, PermissionsAndroid.class})
 public class PermissionRequesterTest {
 
 	private PermissionRequester subject;
@@ -37,6 +42,7 @@ public class PermissionRequesterTest {
 	@Mock private Activity activityMocked;
 	@Mock private Resources resourcesMocked;
 	@Mock private FragmentManager fragmentManagerMocked;
+	@Mock private PermissionsAndroid permissionsAndroidMocked;
 
 	class PermissionClarificationDialogTester extends PermissionClarificationDialog {
 
@@ -50,15 +56,15 @@ public class PermissionRequesterTest {
 
 	private void mockWhenRequestingPermissions(PermissionClarificationDialogTester permissionClarificationDialogTester) {
 		PowerMockito.mockStatic(ContextCompat.class);
-		PowerMockito.when(ContextCompat.checkSelfPermission(any(Context.class), anyString()))
-				.thenReturn(PackageManager.PERMISSION_DENIED);
+		when(permissionsAndroidMocked.checkPermission(any(Context.class), any(PermissionRequester.Permissions.class)))
+				.thenReturn(false);
 		when(activityMocked.getResources()).thenReturn(resourcesMocked);
 		when(activityMocked.getFragmentManager()).thenReturn(fragmentManagerMocked);
 		final String clarifyingMessage = "Clarifying message for this unit test";
 		when(resourcesMocked.getString(anyInt()))
 				.thenReturn(clarifyingMessage);
 		PowerMockito.mockStatic(ActivityCompat.class);
-		PowerMockito.when(ActivityCompat.shouldShowRequestPermissionRationale(any(Activity.class), anyString()))
+		when(permissionsAndroidMocked.shouldShowRequestPermissionRationale(any(Activity.class), any(PermissionRequester.Permissions.class)))
 				.thenReturn(true);
 		PowerMockito.mockStatic(PermissionClarificationDialog.class);
 		PowerMockito.when(PermissionClarificationDialog.build(anyString(), anyString(), any(PermissionRequester.Permissions.class)))
@@ -67,6 +73,8 @@ public class PermissionRequesterTest {
 
 	@Before
 	public void setup() {
+		PowerMockito.mockStatic(PermissionsAndroid.class);
+		when(PermissionsAndroid.create()).thenReturn(permissionsAndroidMocked);
 		subject = PermissionRequester.getPermissionRequester();
 	}
 
@@ -76,7 +84,7 @@ public class PermissionRequesterTest {
 
 		mockWhenRequestingPermissions(permissionClarificationDialogTester);
 
-		subject.requestPermissions(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO);
+		subject.requestPermissions(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
 		assertEquals(1, permissionClarificationDialogTester.numberOfTimesCalled_Show);
 	}
 
@@ -85,29 +93,29 @@ public class PermissionRequesterTest {
 		final String[] permissionsToRequest = {Manifest.permission.GET_ACCOUNTS};
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		subject.finishRequestPermissions(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO);
+		subject.finishRequestPermissions(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
 
-		PowerMockito.verifyStatic(ActivityCompat.class, Mockito.times(1));
-		ActivityCompat.requestPermissions(activityMocked, permissionsToRequest, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO.getRequestCode());
+		verify(permissionsAndroidMocked, Mockito.times(1));
+		permissionsAndroidMocked.requestPermissions(activityMocked, permissionsToRequest, PERMISSION_TO_READ_ACCOUNT_INFO.getRequestCode());
 	}
 
 	@Test
 	public void shouldNotRequestPermissionsFromAndroid() {
 		PowerMockito.mockStatic(ContextCompat.class);
-		PowerMockito.when(ContextCompat.checkSelfPermission(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO.getDescription()))
+		PowerMockito.when(ContextCompat.checkSelfPermission(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO.getDescription()))
 				.thenReturn(PackageManager.PERMISSION_GRANTED);
 		final String[] permissionsToRequest = {Manifest.permission.GET_ACCOUNTS};
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		subject.requestPermissions(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO);
+		subject.requestPermissions(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
 
-		PowerMockito.verifyStatic(ActivityCompat.class, Mockito.times(0));
-		ActivityCompat.requestPermissions(activityMocked, permissionsToRequest, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO.getRequestCode());
+		verify(permissionsAndroidMocked, Mockito.times(0));
+		permissionsAndroidMocked.requestPermissions(activityMocked, permissionsToRequest, PERMISSION_TO_READ_ACCOUNT_INFO.getRequestCode());
 	}
 
 	@Test
 	public void shouldGetPermissionFromId() {
-		assertEquals("should get permission from an ID", PermissionRequester.Permissions.PERMISSION_TO_READ_LOCATION_INFO, PermissionRequester.Permissions.getById(102));
+		assertEquals("should get permission from an ID", PERMISSION_TO_READ_LOCATION_INFO, PermissionRequester.Permissions.getById(102));
 	}
 
 	@Test
@@ -118,8 +126,8 @@ public class PermissionRequesterTest {
 	@Test
 	public void shouldKnowWhenAllRequiredPermissionsGranted() {
 		PowerMockito.mockStatic(ContextCompat.class);
-		PowerMockito.when(ContextCompat.checkSelfPermission(any(Activity.class), anyString()))
-				.thenReturn(PackageManager.PERMISSION_GRANTED);
+		when(permissionsAndroidMocked.checkPermission(any(Activity.class), any(PermissionRequester.Permissions.class)))
+				.thenReturn(true);
 
 		assertTrue("required permissions should indicate they are granted", subject.areAllRequiredPermissionsGranted(activityMocked));
 	}
@@ -127,12 +135,12 @@ public class PermissionRequesterTest {
 	@Test
 	public void shouldKnowWhenOneRequiredPermissionNotGranted() {
 		PowerMockito.mockStatic(ContextCompat.class);
-		PowerMockito.when(ContextCompat.checkSelfPermission(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO.getDescription()))
-				.thenReturn(PackageManager.PERMISSION_GRANTED);
-		PowerMockito.when(ContextCompat.checkSelfPermission(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_LOCATION_INFO.getDescription()))
-				.thenReturn(PackageManager.PERMISSION_GRANTED);
-		PowerMockito.when(ContextCompat.checkSelfPermission(activityMocked, PermissionRequester.Permissions.PERMISSION_TO_READ_PHONE_INFO.getDescription()))
-				.thenReturn(PackageManager.PERMISSION_DENIED);
+		when(permissionsAndroidMocked.checkPermission(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO))
+				.thenReturn(true);
+		when(permissionsAndroidMocked.checkPermission(activityMocked, PERMISSION_TO_READ_LOCATION_INFO))
+				.thenReturn(true);
+		when(permissionsAndroidMocked.checkPermission(activityMocked, PERMISSION_TO_READ_PHONE_INFO))
+				.thenReturn(false);
 
 		assertFalse("required permissions should indicate they are not all granted", subject.areAllRequiredPermissionsGranted(activityMocked));
 	}
@@ -206,9 +214,9 @@ public class PermissionRequesterTest {
 	@Test
 	public void shouldNotRequestAllPermissions() {
 		String[] permissionsToRequest = {
-				PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO.getDescription(),
-				PermissionRequester.Permissions.PERMISSION_TO_READ_LOCATION_INFO.getDescription(),
-				PermissionRequester.Permissions.PERMISSION_TO_READ_PHONE_INFO.getDescription()
+				PERMISSION_TO_READ_ACCOUNT_INFO.getDescription(),
+				PERMISSION_TO_READ_LOCATION_INFO.getDescription(),
+				PERMISSION_TO_READ_PHONE_INFO.getDescription()
 		};
 
 		PowerMockito.mockStatic(ContextCompat.class);
@@ -229,7 +237,7 @@ public class PermissionRequesterTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void whenRequestingNextPermission_shouldRequireValidArgument() {
-		subject.requestNextPermission(activityMocked, null);
+		subject.getNextPermissionToRequest(activityMocked, null);
 	}
 
 	@Test
@@ -237,16 +245,16 @@ public class PermissionRequesterTest {
 		PowerMockito.mockStatic(ContextCompat.class);
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		mockCheckSelfPerm(PackageManager.PERMISSION_DENIED);
+		mockCheckSelfPerm(false);
 		mockShouldShowRequestPermRationale(true);
 
 		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
 		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
 
-		assertRequestingNextPerm(permReqJob, true, false);
-		assertRequestingNextPerm(permReqJob, true, false);
-		assertRequestingNextPerm(permReqJob, true, false);
-		assertRequestingNextPerm(permReqJob, false, true);
+		assertRequestingNextPerm(permReqJob, PERMISSION_TO_READ_ACCOUNT_INFO, false);
+		assertRequestingNextPerm(permReqJob, PERMISSION_TO_READ_LOCATION_INFO, false);
+		assertRequestingNextPerm(permReqJob, PERMISSION_TO_READ_PHONE_INFO, false);
+		assertRequestingNextPerm(permReqJob, null, true);
 	}
 
 	@Test
@@ -254,15 +262,13 @@ public class PermissionRequesterTest {
 		PowerMockito.mockStatic(ContextCompat.class);
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		mockCheckSelfPerm(PackageManager.PERMISSION_GRANTED);
+		mockCheckSelfPerm(true);
 		mockShouldShowRequestPermRationale(true);
 
 		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
 		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
 
-		assertRequestingNextPerm(permReqJob, false, false);
-		assertRequestingNextPerm(permReqJob, false, false);
-		assertRequestingNextPerm(permReqJob, false, true);
+		assertRequestingNextPerm(permReqJob, null, true);
 	}
 
 	@Test
@@ -270,15 +276,13 @@ public class PermissionRequesterTest {
 		PowerMockito.mockStatic(ContextCompat.class);
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		mockCheckSelfPerm(PackageManager.PERMISSION_DENIED);
+		mockCheckSelfPerm(false);
 		mockShouldShowRequestPermRationale(false);
 
 		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
 		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
 
-		assertRequestingNextPerm(permReqJob, false, false);
-		assertRequestingNextPerm(permReqJob, false, false);
-		assertRequestingNextPerm(permReqJob, false, true);
+		assertRequestingNextPerm(permReqJob, null, true);
 	}
 
 	@Test
@@ -286,29 +290,27 @@ public class PermissionRequesterTest {
 		PowerMockito.mockStatic(ContextCompat.class);
 		PowerMockito.mockStatic(ActivityCompat.class);
 
-		mockCheckSelfPerm(PackageManager.PERMISSION_DENIED);
+		mockCheckSelfPerm(false);
 		mockShouldShowRequestPermRationale(false);
 
 		PermissionRequestJob permReqJob = subject.beginRequestingAllPermissions();
 		assertFalse(permReqJob.hasAllPermissionsBeenRequested());
 
-		assertRequestingNextPerm(permReqJob, false, false);
-		assertRequestingNextPerm(permReqJob, false, false);
-		assertRequestingNextPerm(permReqJob, false, true);
+		assertRequestingNextPerm(permReqJob, null, true);
 	}
 
-	private void assertRequestingNextPerm(PermissionRequestJob permReqJob, boolean shouldPermBeenRequested, boolean hasAllPermsBeenRequested) {
-		assertEquals(shouldPermBeenRequested, subject.requestNextPermission(activityMocked, permReqJob));
+	private void assertRequestingNextPerm(PermissionRequestJob permReqJob, PermissionRequester.Permissions permToRequest, boolean hasAllPermsBeenRequested) {
+		assertEquals(permToRequest, subject.getNextPermissionToRequest(activityMocked, permReqJob));
 		assertEquals(hasAllPermsBeenRequested, permReqJob.hasAllPermissionsBeenRequested());
 	}
 
-	private void mockCheckSelfPerm(int permissionCode) {
-		PowerMockito.when(ContextCompat.checkSelfPermission(any(Context.class), anyString()))
-				.thenReturn(permissionCode);
+	private void mockCheckSelfPerm(boolean isPermGranted) {
+		when(permissionsAndroidMocked.checkPermission(any(Context.class), any(PermissionRequester.Permissions.class)))
+				.thenReturn(isPermGranted);
 	}
 
 	private void mockShouldShowRequestPermRationale(boolean shouldShow) {
-		PowerMockito.when(ActivityCompat.shouldShowRequestPermissionRationale(any(Activity.class), anyString()))
+		when(permissionsAndroidMocked.shouldShowRequestPermissionRationale(any(Activity.class), any(PermissionRequester.Permissions.class)))
 				.thenReturn(shouldShow);
 	}
 }

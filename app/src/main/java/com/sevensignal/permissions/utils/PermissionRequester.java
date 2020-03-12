@@ -4,11 +4,10 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.sevensignal.permissions.R;
+import com.sevensignal.permissions.shims.PermissionsAndroid;
 import com.sevensignal.permissions.view.PermissionClarificationDialog;
 
 import java.util.ArrayList;
@@ -60,7 +59,7 @@ public class PermissionRequester {
 		return new PermissionRequestJob(getAllValidPermissions());
 	}
 
-	public boolean requestNextPermission(final Activity activity, final PermissionRequestJob permissionRequestJob) {
+	public Permissions getNextPermissionToRequest(final Activity activity, final PermissionRequestJob permissionRequestJob) {
 		if (permissionRequestJob == null) {
 			throw new IllegalArgumentException();
 		}
@@ -70,10 +69,10 @@ public class PermissionRequester {
 				case WAITING:
 					if (shouldRequestPermission(activity, permissionRequest.getPermission())) {
 						permissionRequest.setRequestingState(PermissionRequestingStates.REQUESTING);
-						return true;
+						return permissionRequest.getPermission();
 					} else {
 						permissionRequest.setRequestingState(PermissionRequestingStates.REQUESTED);
-						return false;
+						break;
 					}
 
 				case REQUESTED:
@@ -88,16 +87,13 @@ public class PermissionRequester {
 					break;
 			}
 		}
-		return false;
+		return null;
 	}
 
 	private boolean shouldRequestPermission(Activity activity, Permissions permission) {
-		return (!checkPermission(activity, permission) &&
-				shouldShowRequestPermissionRationale(activity, permission));
-	}
-
-	boolean checkPermission(Context context, Permissions permission) {
-		return (ContextCompat.checkSelfPermission(context, permission.getDescription()) == PackageManager.PERMISSION_GRANTED);
+		PermissionsAndroid android = PermissionsAndroid.create();
+		return (!android.checkPermission(activity, permission) &&
+				android.shouldShowRequestPermissionRationale(activity, permission));
 	}
 
 	private List<Permissions> getAllValidPermissions() {
@@ -111,27 +107,33 @@ public class PermissionRequester {
 	}
 
 	public boolean areAllRequiredPermissionsGranted(final Context context) {
+		PermissionsAndroid android = PermissionsAndroid.create();
 		boolean permissionsGranted = true;
 		for (Permissions permission : getAllValidPermissions()) {
-			permissionsGranted = permissionsGranted && checkPermission(context, permission);
+			permissionsGranted = permissionsGranted && android.checkPermission(context, permission);
 		}
 		return permissionsGranted;
 	}
 
+	// ----------
+
 	public void requestPermissions(Activity activity, final Permissions permission) {
-		if (!checkPermission(activity, permission)) {
+		PermissionsAndroid android = PermissionsAndroid.create();
+		if (!android.checkPermission(activity, permission)) {
 			showRequestPermissionRationale(activity, permission);
 		}
 	}
 
 	public void finishRequestPermissions(final Activity activity, final Permissions permission) {
-			String[] permissions = {permission.getDescription()};
-			ActivityCompat.requestPermissions(activity, permissions, permission.getRequestCode());
+		PermissionsAndroid android = PermissionsAndroid.create();
+		String[] permissions = {permission.getDescription()};
+		android.requestPermissions(activity, permissions, permission.getRequestCode());
 	}
 
 	private void showRequestPermissionRationale(final Activity activity, final Permissions permission) {
-		if (!checkPermission(activity, permission) &&
-			shouldShowRequestPermissionRationale(activity, permission)) {
+		PermissionsAndroid android = PermissionsAndroid.create();
+		if (!android.checkPermission(activity, permission) &&
+			android.shouldShowRequestPermissionRationale(activity, permission)) {
 
 			PermissionClarificationDialog.build(
 					"",
@@ -139,10 +141,6 @@ public class PermissionRequester {
 					permission)
 					.show(activity.getFragmentManager(), PERMISSION_REQUESTER_DIALOG_TAG);
 		}
-	}
-
-	private boolean shouldShowRequestPermissionRationale(Activity activity, Permissions permission) {
-		return ActivityCompat.shouldShowRequestPermissionRationale(activity, permission.getDescription());
 	}
 
 	public void requestAllPermissions(final Activity activity) {
