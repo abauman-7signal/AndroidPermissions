@@ -121,36 +121,6 @@ public class PermissionRequester {
 		android.requestPermissions(activity, permissions, permission.getRequestCode());
 	}
 
-	// ----------
-
-	public void requestPermissions(Activity activity, final Permissions permission) {
-		PermissionsAndroid android = PermissionsAndroid.create();
-		if (!android.checkPermission(activity, permission)) {
-			showRequestPermissionRationale(activity, permission);
-		}
-	}
-
-	private void showRequestPermissionRationale(final Activity activity, final Permissions permission) {
-		PermissionsAndroid android = PermissionsAndroid.create();
-		if (!android.checkPermission(activity, permission) &&
-			android.shouldShowRequestPermissionRationale(activity, permission)) {
-
-			PermissionClarificationDialog.build(
-					"",
-					activity.getResources().getString(permission.getReasonId()),
-					permission)
-					.show(activity.getFragmentManager(), PERMISSION_REQUESTER_DIALOG_TAG);
-		}
-	}
-
-	public void requestAllPermissions(final Activity activity) {
-		if (!areAllRequiredPermissionsGranted(activity)) {
-			for (Permissions permission : getAllValidPermissions()) {
-				requestPermissions(activity, permission);
-			}
-		}
-	}
-
 	public boolean isPermissionGranted(final int requestCode, final String[] permissions, final int[] grantResults) {
 		final Permissions requestedPermission = Permissions.getById(requestCode);
 		if (requestedPermission == Permissions.PERMISSION_INVALID ||

@@ -79,16 +79,6 @@ public class PermissionRequesterTest {
 	}
 
 	@Test
-	public void shouldRequestPermissionsFromAndroid() {
-		PermissionClarificationDialogTester permissionClarificationDialogTester = new PermissionClarificationDialogTester();
-
-		mockWhenRequestingPermissions(permissionClarificationDialogTester);
-
-		subject.requestPermissions(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
-		assertEquals(1, permissionClarificationDialogTester.numberOfTimesCalled_Show);
-	}
-
-	@Test
 	public void shouldFinishRequestPermissionsFromAndroid() {
 		final String[] permissionsToRequest = {Manifest.permission.GET_ACCOUNTS};
 		PowerMockito.mockStatic(ActivityCompat.class);
@@ -96,20 +86,6 @@ public class PermissionRequesterTest {
 		subject.finishRequestingPermission(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
 
 		verify(permissionsAndroidMocked, Mockito.times(1));
-		permissionsAndroidMocked.requestPermissions(activityMocked, permissionsToRequest, PERMISSION_TO_READ_ACCOUNT_INFO.getRequestCode());
-	}
-
-	@Test
-	public void shouldNotRequestPermissionsFromAndroid() {
-		PowerMockito.mockStatic(ContextCompat.class);
-		PowerMockito.when(ContextCompat.checkSelfPermission(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO.getDescription()))
-				.thenReturn(PackageManager.PERMISSION_GRANTED);
-		final String[] permissionsToRequest = {Manifest.permission.GET_ACCOUNTS};
-		PowerMockito.mockStatic(ActivityCompat.class);
-
-		subject.requestPermissions(activityMocked, PERMISSION_TO_READ_ACCOUNT_INFO);
-
-		verify(permissionsAndroidMocked, Mockito.times(0));
 		permissionsAndroidMocked.requestPermissions(activityMocked, permissionsToRequest, PERMISSION_TO_READ_ACCOUNT_INFO.getRequestCode());
 	}
 
@@ -198,35 +174,6 @@ public class PermissionRequesterTest {
 		final int[] grantResults = {PackageManager.PERMISSION_GRANTED};
 		final String[] permissionsResults = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.ACCESS_COARSE_LOCATION};
 		assertFalse("should indicate permission not granted when size of permission results does not match size of grant results", subject.isPermissionGranted(103, permissionsResults, grantResults));
-	}
-
-	@Test
-	public void shouldRequestAllPermissions() {
-		PermissionClarificationDialogTester permissionClarificationDialogTester = new PermissionClarificationDialogTester();
-
-		mockWhenRequestingPermissions(permissionClarificationDialogTester);
-
-		subject.requestAllPermissions(activityMocked);
-
-		assertEquals(3, permissionClarificationDialogTester.numberOfTimesCalled_Show);
-	}
-
-	@Test
-	public void shouldNotRequestAllPermissions() {
-		String[] permissionsToRequest = {
-				PERMISSION_TO_READ_ACCOUNT_INFO.getDescription(),
-				PERMISSION_TO_READ_LOCATION_INFO.getDescription(),
-				PERMISSION_TO_READ_PHONE_INFO.getDescription()
-		};
-
-		PowerMockito.mockStatic(ContextCompat.class);
-		PowerMockito.when(ContextCompat.checkSelfPermission(any(Context.class), anyString()))
-				.thenReturn(PackageManager.PERMISSION_GRANTED);
-		PowerMockito.mockStatic(ActivityCompat.class);
-		subject.requestAllPermissions(activityMocked);
-
-		PowerMockito.verifyStatic(ActivityCompat.class, Mockito.times(0));
-		ActivityCompat.requestPermissions(activityMocked, permissionsToRequest, PermissionRequester.REQUEST_CODE_FOR_ALL_PERMISSIONS);
 	}
 
 	@Test
