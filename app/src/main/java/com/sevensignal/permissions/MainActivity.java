@@ -1,80 +1,186 @@
 package com.sevensignal.permissions;
 
-import android.support.v7.app.AppCompatActivity;
+import android.app.Activity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.TextView;
 
 import com.sevensignal.permissions.logging.LoggingConstants;
+import com.sevensignal.permissions.shims.PermissionsAndroid;
+import com.sevensignal.permissions.utils.PermissionRequestJob;
 import com.sevensignal.permissions.utils.PermissionRequester;
+import com.sevensignal.permissions.view.PermissionClarificationDialog;
 
 public class MainActivity extends AppCompatActivity {
 
 	private static final String CLASS_NAME = MainActivity.class.getSimpleName();
+	private static final String PERM_REQUEST_JOB_KEY = "PERM_REQUEST_JOB_KEY";
+	private static final String PERM_REQUEST_IN_PROGRESS_KEY = "PERM_REQUEST_IN_PROGRESS_KEY";
+	final static String PERMISSION_REQUESTER_DIALOG_TAG = "permissionRequesterDialogTag";
+	private PermissionRequestJob permRequestJob;
+	private boolean isPermRequestInProgress = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		Log.d (LoggingConstants.PERM_UI, CLASS_NAME + " onCreate");
+		Log.v(LoggingConstants.PERM_UI, CLASS_NAME + " onCreate");
+		Log.d(LoggingConstants.PERM_UI, "Restoring permRequestJob...");
+		restorePermRequestState(savedInstanceState);
 		setContentView(R.layout.activity_main);
 	}
 
 	@Override
 	protected void onStart() {
 		super.onStart();
-		Log.d (LoggingConstants.PERM_UI, CLASS_NAME + " onStart");
+		Log.v(LoggingConstants.PERM_UI, CLASS_NAME + " onStart");
 
-//		permissionRequester.requestPermissions(this, PermissionRequester.Permissions.PERMISSION_TO_READ_ACCOUNT_INFO);
-//        permissionRequester.requestAllPermissions(this);
-		requestAllPermissions();
+		if (!isPermClarificationDialogFound() && !isPermRequestInProgress) {
+			isPermRequestInProgress = beginRequestingPermissions();
+			if (isPermRequestInProgress) {
+				appendMessage("Requesting user to grant permissions...");
+			}
+		}
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-		Log.d(LoggingConstants.PERM_UI, CLASS_NAME + " onResume");
+		Log.v(LoggingConstants.PERM_UI, CLASS_NAME + " onResume");
 	}
+
 
 	@Override
 	protected void onSaveInstanceState(Bundle instanceState) {
 		super.onSaveInstanceState(instanceState);
-		Log.d(LoggingConstants.PERM_UI, CLASS_NAME + " onSaveInstanceState");
+		Log.v(LoggingConstants.PERM_UI, CLASS_NAME + " onSaveInstanceState");
+		savePermRequestState(instanceState);
 	}
+
+	private void savePermRequestState(Bundle instanceState) {
+		if (permRequestJob != null) {
+			Log.d(LoggingConstants.PERM_UI, "Saving permission request job state: " + permRequestJob);
+			instanceState.putSerializable(PERM_REQUEST_JOB_KEY, permRequestJob);
+		}
+		Log.d(LoggingConstants.PERM_UI, "Saving permission request in progress state: " + isPermRequestInProgress);
+		instanceState.putSerializable(PERM_REQUEST_IN_PROGRESS_KEY, isPermRequestInProgress);
+	}
+
+	private void restorePermRequestState(Bundle savedInstanceState) {
+		if (savedInstanceState != null) {
+			permRequestJob = (PermissionRequestJob) savedInstanceState.getSerializable(PERM_REQUEST_JOB_KEY);
+			Log.d(LoggingConstants.PERM_UI, "Restored permission request job state: " + permRequestJob);
+			isPermRequestInProgress = (boolean)savedInstanceState.getSerializable(PERM_REQUEST_IN_PROGRESS_KEY);
+			Log.d(LoggingConstants.PERM_UI, "Restored permission request in progress state: " + isPermRequestInProgress);
+		}
+	}
+
+	private void appendMessage(String message) {
+		final TextView msgView = findViewById(R.id.message_text_view);
+		if (msgView != null) {
+			msgView.append(message + System.lineSeparator());
+		}
+	};
 
 	@Override
 	protected void onStop() {
 		super.onStop();
-		Log.d (LoggingConstants.PERM_UI, CLASS_NAME + " onStop");
+		Log.v(LoggingConstants.PERM_UI, CLASS_NAME + " onStop");
 	}
 
 	@Override
 	protected void onDestroy() {
 		super.onDestroy(); // allow base classes to clean up resources also
-		Log.d (LoggingConstants.PERM_UI, CLASS_NAME + " onDestroy()");
+		Log.v(LoggingConstants.PERM_UI, CLASS_NAME + " onDestroy()");
 	}
 
-	private void requestAllPermissions() {
+	private boolean beginRequestingPermissions() {
 		final PermissionRequester permissionRequester = PermissionRequester.getPermissionRequester();
-		permissionRequester.requestAllPermissions(this);
+		if (!permissionRequester.areAllRequiredPermissionsGranted(this)) {
+			if (permRequestJob == null) {
+				Log.d(LoggingConstants.PERM_UI, "Initializing permRequestJob...");
+				permRequestJob = permissionRequester.beginRequestingAllPermissions();
+			}
+			return requestNextPermission(permRequestJob);
+//			PermissionRequester.Permissions permission;
+//			while((permission = permissionRequester.getNextPermissionToRequest(this, permRequestJob, currentPermBeingRequested)) != null) {
+//				if (permission != null) {
+//					PermissionsAndroid android = PermissionsAndroid.create();
+//					if (!android.checkPermission(this, permission)) {
+//						if (showRequestPermissionRationale(this, permission)) {
+//							return true;
+//						}
+//					}
+//				}
+//			}
+		}
+		return false;
+	}
+
+	private boolean isPermClarificationDialogFound() {
+		PermissionClarificationDialog permClarificationDialog = (PermissionClarificationDialog)getFragmentManager().findFragmentByTag(PERMISSION_REQUESTER_DIALOG_TAG);
+		if (permClarificationDialog != null) {
+			Log.d(LoggingConstants.PERM_UI, "Found permission clarification dialog");
+			return true;
+		}
+		Log.d(LoggingConstants.PERM_UI, "Could not find Permission clarification dialog");
+		return false;
+	}
+
+	private boolean showRequestPermissionRationale(final Activity activity, final PermissionRequester.Permissions permission) {
+		PermissionsAndroid android = PermissionsAndroid.create();
+		if (!android.checkPermission(activity, permission) &&
+				android.shouldShowRequestPermissionRationale(activity, permission)) {
+
+			final String msg = "Requesting permission: " + permission.getDescription();
+			appendMessage(msg);
+			Log.d(LoggingConstants.PERM_UI, msg);
+			PermissionClarificationDialog.build(
+					"",
+					activity.getResources().getString(permission.getReasonId()),
+					permission)
+					.show(activity.getFragmentManager(), PERMISSION_REQUESTER_DIALOG_TAG);
+			return true;
+		}
+		return false;
+	}
+
+	private boolean requestNextPermission(PermissionRequestJob permissionRequestJob) {
+		final PermissionRequester permissionRequester = PermissionRequester.getPermissionRequester();
+		if (permissionRequestJob != null) {
+			final PermissionRequester.Permissions nextPermToRequest = permissionRequester.getNextPermissionToRequest(this, permissionRequestJob);
+			if (nextPermToRequest != null) {
+				PermissionsAndroid android = PermissionsAndroid.create();
+				if (!android.checkPermission(this, nextPermToRequest)) {
+					return showRequestPermissionRationale(this, nextPermToRequest);
+				}
+				return false;
+			}
+		}
+		return false;
 	}
 
 	@Override
 	public void onRequestPermissionsResult(final int requestCode, final String[] permissions, final int[] grantResults) {
-		Log.w(LoggingConstants.PERM_UI, "received onRequestPermissionsResult");
-		final PermissionRequester permissionRequester = PermissionRequester.getPermissionRequester();
+		Log.d(LoggingConstants.PERM_UI, "received onRequestPermissionsResult");
 
-		if (requestCode == PermissionRequester.REQUEST_CODE_FOR_ALL_PERMISSIONS) {
-		    if (permissionRequester.areAllRequiredPermissionsGranted(this)) {
-		        Log.d(LoggingConstants.PERM_UI, "All permissions granted");
-            } else {
-		        Log.w(LoggingConstants.PERM_UI, "Not all required permissions are granted");
-            }
-        } else {
-            if (!permissionRequester.isPermissionGranted(requestCode, permissions, grantResults)) {
-                Log.w(LoggingConstants.PERM_UI, "User denied permission for " + PermissionRequester.Permissions.getById(requestCode).getDescription());
-            } else {
-                Log.d(LoggingConstants.PERM_UI, "User granted permission for " + PermissionRequester.Permissions.getById(requestCode).getDescription());
-            }
-        }
+		if (!requestNextPermission(permRequestJob)) {
+			String msg = "Finished requesting all permissions";
+			Log.d(LoggingConstants.PERM_UI, msg);
+			appendMessage(msg);
+			isPermRequestInProgress = false;
+			PermissionRequester permissionRequester = PermissionRequester.getPermissionRequester();
+			if (!permissionRequester.areAllRequiredPermissionsGranted(this)) {
+				msg = "Not all permissions granted";
+				Log.w(LoggingConstants.PERM_UI, msg);
+				appendMessage(msg);
+			} else {
+				msg = "All permissions granted";
+				Log.d(LoggingConstants.PERM_UI, msg);
+				appendMessage(msg);
+			}
+			permRequestJob = null;
+		}
 	}
 
 }
