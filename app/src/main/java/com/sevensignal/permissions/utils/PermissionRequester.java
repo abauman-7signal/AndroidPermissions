@@ -8,7 +8,6 @@ import android.util.Log;
 
 import com.sevensignal.permissions.R;
 import com.sevensignal.permissions.shims.PermissionsAndroid;
-import com.sevensignal.permissions.view.PermissionClarificationDialog;
 
 import java.util.ArrayList;
 import java.util.List;
