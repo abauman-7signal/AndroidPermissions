@@ -18,15 +18,11 @@ import static com.sevensignal.permissions.logging.LoggingConstants.PERM_REQUEST_
 
 public class PermissionRequester {
 
-	private final static String PERMISSION_REQUESTER_DIALOG_TAG = "permissionRequesterDialogTag";
-
 	private PermissionRequester() {}
 
 	public static PermissionRequester getPermissionRequester() {
 		return new PermissionRequester();
 	}
-
-	public static final int REQUEST_CODE_FOR_ALL_PERMISSIONS = 999;
 
 	public enum Permissions {
 		PERMISSION_TO_READ_ACCOUNT_INFO(101, Manifest.permission.GET_ACCOUNTS, R.string.account_permission_reason),
